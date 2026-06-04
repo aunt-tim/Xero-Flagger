@@ -292,7 +292,7 @@ async function highlightFlaggedRows(flagged) {
       if (cell) {
         const badge = document.createElement('span');
         badge.className = 'xf-flag-badge';
-        badge.textContent = 'Flagged';
+        badge.textContent = 'Flagged for non-payment';
         badge.title = 'Will be de-selected by De-Select Flagged';
         cell.insertBefore(badge, cell.firstChild);
       }
