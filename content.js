@@ -72,10 +72,18 @@ async function initInvoicePage() {
       delete current[invoiceId];
       btn.className = '';
     } else {
-      const fromEl = document.querySelector(
-        '.xui-pageheading--title, [data-automationid="contact-name"], h1'
-      );
-      const label = fromEl ? fromEl.textContent.trim() : invoiceId;
+      // Legacy: <a href="/Contacts/View/UUID">Company Name<input ...></a>
+      // SPA: [data-automationid="contact-name"]
+      const contactLink = document.querySelector('a[href*="/Contacts/View/"]');
+      const contactSpa = document.querySelector('[data-automationid="contact-name"]');
+      let label = invoiceId;
+      if (contactLink) {
+        // First text node only — element also contains hidden <input> children
+        const textNode = [...contactLink.childNodes].find(n => n.nodeType === Node.TEXT_NODE);
+        label = textNode ? textNode.textContent.trim() : contactLink.textContent.trim();
+      } else if (contactSpa) {
+        label = contactSpa.textContent.trim();
+      }
 
       // Reference: try SPA automationid first, then legacy table label
       const refEl = document.querySelector(
