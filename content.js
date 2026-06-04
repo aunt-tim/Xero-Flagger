@@ -59,14 +59,15 @@ async function initInvoicePage() {
 
   const btn = document.createElement('button');
   btn.id = 'xf-flag-btn';
-  btn.textContent = 'Flag for non-payment';
   btn.className = flagged[invoiceId] ? 'xf-flagged' : '';
+  btn.textContent = flagged[invoiceId] ? 'Flagged for non-payment' : 'Flag for non-payment';
 
   btn.addEventListener('click', async () => {
     const current = await getFlagged();
     if (current[invoiceId]) {
       delete current[invoiceId];
       btn.className = '';
+      btn.textContent = 'Flag for non-payment';
     } else {
       // Legacy: <a href="/Contacts/View/UUID">Company Name<input ...></a>
       // SPA: [data-automationid="contact-name"]
@@ -100,6 +101,7 @@ async function initInvoicePage() {
 
       current[invoiceId] = { label, reference, amount, flaggedAt: Date.now(), url: location.href };
       btn.className = 'xf-flagged';
+      btn.textContent = 'Flagged for non-payment';
     }
     await setFlagged(current);
   });
