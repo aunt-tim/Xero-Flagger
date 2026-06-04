@@ -78,13 +78,20 @@
   border-color: #b71c1c !important;
 }
 
-/* After pressed — brief success state then returns to grey */
-#xf-flag-btn-remove.xf-done {
-  background: #f5f5f5 !important;
-  color: #aaa !important;
-  border: 1px solid #ddd !important;
+/* Success flash — fades to grey */
+#xf-flag-btn-remove.xf-success-flash {
+  background: #1ab5d4 !important;
+  color: #fff !important;
+  border-color: #1ab5d4 !important;
   cursor: default !important;
   pointer-events: none !important;
+  animation: xf-fade-out 2.5s forwards !important;
+}
+
+@keyframes xf-fade-out {
+  0%   { background: #1ab5d4; border-color: #1ab5d4; color: #fff; }
+  60%  { background: #1ab5d4; border-color: #1ab5d4; color: #fff; }
+  100% { background: #f5f5f5; border-color: #ddd; color: #aaa; }
 }
 
 /* Fallback bar when toolbar not found */
@@ -107,18 +114,6 @@
   z-index: 9999;
 }
 
-#xf-status {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1ab5d4;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-#xf-status.xf-success { color: #1ab5d4; }
-#xf-status.xf-warn    { color: #f57f17; }
-#xf-status.xf-info    { color: #1ab5d4; }
 
 /* ── Highlight flagged rows in the bill list ── */
 

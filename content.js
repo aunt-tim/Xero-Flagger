@@ -158,11 +158,7 @@ async function handleRemoveFlagged(statusEl) {
   const flagged = await getFlagged();
   const flaggedIds = Object.keys(flagged);
 
-  if (flaggedIds.length === 0) {
-    statusEl.textContent = 'No invoices are flagged.';
-    statusEl.className = 'xf-info';
-    return;
-  }
+  if (flaggedIds.length === 0) return;
 
   const rowMap = getRowsByInvoiceId();
   let unchecked = 0;
@@ -181,17 +177,16 @@ async function handleRemoveFlagged(statusEl) {
 
   if (btn) {
     btn.classList.remove('xf-active');
-    btn.classList.add('xf-done');
-    // Clear done state after 3s and re-sync so button returns to grey
+    btn.classList.add('xf-success-flash');
+    btn.textContent = '✓ Removed';
+    statusEl.textContent = '';
+    statusEl.className = '';
     setTimeout(() => {
-      btn.classList.remove('xf-done');
+      btn.classList.remove('xf-success-flash');
+      btn.textContent = 'Remove Flagged';
       syncRemoveButton();
-    }, 3000);
+    }, 2500);
   }
-
-  statusEl.textContent = `✓ Flagged items removed${notFound ? ` (${notFound} not on this page)` : ''}`;
-  statusEl.className = 'xf-success';
-  setTimeout(() => { statusEl.textContent = ''; statusEl.className = ''; }, 3000);
 }
 
 // Returns Map of invoiceId → table row for all rows currently rendered.
