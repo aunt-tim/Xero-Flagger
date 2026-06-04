@@ -122,7 +122,31 @@ function buildRemoveUI() {
     if (main) main.prepend(bar);
   }
 
-  btn.addEventListener('click', () => handleRemoveFlagged(status));
+  btn.addEventListener('click', () => {
+    if (!btn.classList.contains('xf-active')) return;
+    handleRemoveFlagged(status);
+  });
+}
+
+// Recheck which flagged invoices have their checkbox ticked and update button state.
+async function syncRemoveButton() {
+  const btn = document.getElementById('xf-flag-btn-remove');
+  if (!btn) return;
+  if (btn.classList.contains('xf-done')) return;
+
+  const flagged = await getFlagged();
+  const flaggedIds = Object.keys(flagged);
+  if (flaggedIds.length === 0) return;
+
+  const rowMap = getRowsByInvoiceId();
+  const anyChecked = flaggedIds.some(id => {
+    const row = rowMap.get(id);
+    if (!row) return false;
+    const cb = row.querySelector('input[type="checkbox"]');
+    return cb && cb.checked;
+  });
+
+  btn.classList.toggle('xf-active', anyChecked);
 }
 
 async function handleRemoveFlagged(statusEl) {
@@ -155,15 +179,19 @@ async function handleRemoveFlagged(statusEl) {
     }
   }
 
-  if (btn) btn.classList.add('xf-done');
-
-  if (unchecked === 0) {
-    statusEl.textContent = '✓ Flagged items removed';
-    statusEl.className = 'xf-success';
-  } else {
-    statusEl.textContent = `✓ Flagged items removed${notFound ? ` (${notFound} not on this page)` : ''}`;
-    statusEl.className = 'xf-success';
+  if (btn) {
+    btn.classList.remove('xf-active');
+    btn.classList.add('xf-done');
+    // Clear done state after 3s and re-sync so button returns to grey
+    setTimeout(() => {
+      btn.classList.remove('xf-done');
+      syncRemoveButton();
+    }, 3000);
   }
+
+  statusEl.textContent = `✓ Flagged items removed${notFound ? ` (${notFound} not on this page)` : ''}`;
+  statusEl.className = 'xf-success';
+  setTimeout(() => { statusEl.textContent = ''; statusEl.className = ''; }, 3000);
 }
 
 // Returns Map of invoiceId → table row for all rows currently rendered.
@@ -206,6 +234,7 @@ async function initAwaitingPaymentPage() {
     buildRemoveUI();
     const flagged = await getFlagged();
     highlightFlaggedRows(flagged);
+    syncRemoveButton();
   };
 
   const poll = setInterval(async () => {
@@ -225,13 +254,21 @@ async function initAwaitingPaymentPage() {
     if (attempts >= MAX) clearInterval(poll);
   }, 200);
 
-  // Also watch for Xero re-rendering the toolbar and evicting our button
+  // Watch for toolbar eviction AND checkbox state changes
   _listObserver = new MutationObserver(async () => {
-    if (!document.getElementById('xf-flag-btn-remove') && isAwaitingPaymentPage()) {
+    if (!isAwaitingPaymentPage()) return;
+    if (!document.getElementById('xf-flag-btn-remove')) {
       await tryBuild();
+    } else {
+      syncRemoveButton();
     }
   });
-  _listObserver.observe(document.body, { childList: true, subtree: true });
+  _listObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['checked'] });
+
+  // Checkbox clicks don't always fire attribute mutations — listen directly too
+  document.addEventListener('change', e => {
+    if (e.target.type === 'checkbox') syncRemoveButton();
+  }, { capture: true });
 }
 
 // ─── Router ───────────────────────────────────────────────────────────────────
