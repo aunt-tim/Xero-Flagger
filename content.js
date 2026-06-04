@@ -2,13 +2,22 @@
 
 const STORAGE_KEY = 'xeroFlaggedInvoices';
 
+// Extract bill ID from either URL format:
+//   /app/!!Qb4n/bills/view/bill?id=UUID   (new SPA)
+//   AccountsPayable/View.aspx?InvoiceID=UUID  (old)
 function getInvoiceId() {
-  const match = window.location.search.match(/InvoiceID=([a-f0-9-]+)/i);
-  return match ? match[1].toLowerCase() : null;
+  const spa = window.location.search.match(/[?&]id=([a-f0-9-]+)/i);
+  if (spa) return spa[1].toLowerCase();
+  const legacy = window.location.search.match(/InvoiceID=([a-f0-9-]+)/i);
+  if (legacy) return legacy[1].toLowerCase();
+  return null;
 }
 
 function isInvoicePage() {
-  return /AccountsPayable\/View\.aspx/i.test(window.location.pathname);
+  return (
+    /\/bills\/view\/bill/i.test(window.location.pathname) ||
+    /AccountsPayable\/View\.aspx/i.test(window.location.pathname)
+  );
 }
 
 function isAwaitingPaymentPage() {
@@ -34,14 +43,14 @@ async function setFlagged(data) {
 async function initInvoicePage() {
   const invoiceId = getInvoiceId();
   if (!invoiceId) return;
+  if (document.getElementById('xf-flag-btn')) return;
 
   const flagged = await getFlagged();
-  const isFlagged = !!flagged[invoiceId];
 
   const btn = document.createElement('button');
   btn.id = 'xf-flag-btn';
   btn.textContent = 'Flag';
-  btn.className = isFlagged ? 'xf-flagged' : '';
+  btn.className = flagged[invoiceId] ? 'xf-flagged' : '';
 
   btn.addEventListener('click', async () => {
     const current = await getFlagged();
@@ -49,7 +58,9 @@ async function initInvoicePage() {
       delete current[invoiceId];
       btn.className = '';
     } else {
-      const fromEl = document.querySelector('table td a, .from a, [data-automationid="contact-name"]');
+      const fromEl = document.querySelector(
+        '.xui-pageheading--title, [data-automationid="contact-name"], h1'
+      );
       const label = fromEl ? fromEl.textContent.trim() : invoiceId;
       current[invoiceId] = { label, flaggedAt: Date.now() };
       btn.className = 'xf-flagged';
@@ -57,41 +68,59 @@ async function initInvoicePage() {
     await setFlagged(current);
   });
 
-  const toolbar = document.querySelector('.invoice-options, .x-invoice-header, .invoice-header, [class*="invoiceHeader"], .button-group');
+  // Insert next to Print PDF / Bill Options toolbar
+  // XUI page heading right-content holds the action buttons
+  const toolbar = document.querySelector(
+    '.xui-pageheading--actions .xui-actions, ' +
+    '.xui-pageheading--rightcontent, ' +
+    '.xui-actions-layout, ' +
+    'div.status .right'
+  );
   if (toolbar) {
     toolbar.prepend(btn);
   } else {
-    btn.style.position = 'fixed';
-    btn.style.top = '80px';
-    btn.style.right = '24px';
-    btn.style.zIndex = '99999';
+    // Fallback: fixed position until SPA renders
+    btn.classList.add('xf-fixed');
     document.body.appendChild(btn);
   }
 }
 
 // ─── Awaiting payment list page ───────────────────────────────────────────────
 
-function buildRemoveUI(container) {
-  if (document.getElementById('xf-remove-bar')) return;
-
-  const bar = document.createElement('div');
-  bar.id = 'xf-remove-bar';
+function buildRemoveUI() {
+  if (document.getElementById('xf-flag-btn-remove')) return;
 
   const btn = document.createElement('button');
-  btn.id = 'xf-remove-btn';
+  btn.id = 'xf-flag-btn-remove';
+  // Style to match Xero's XUI standard button
+  btn.className = 'xui-button xui-button-standard xui-button-small';
   btn.textContent = 'Remove Flagged';
 
   const status = document.createElement('span');
   status.id = 'xf-status';
 
-  bar.appendChild(btn);
-  bar.appendChild(status);
-  container.prepend(bar);
+  // Insert into the Make payment button group container
+  const bulkActions = document.querySelector('.xui-u-flex.bulk-actions-spacing');
+  if (bulkActions) {
+    const wrapper = document.createElement('div');
+    wrapper.id = 'xf-remove-wrapper';
+    wrapper.appendChild(btn);
+    wrapper.appendChild(status);
+    bulkActions.prepend(wrapper);
+  } else {
+    // Fallback bar if the toolbar hasn't rendered yet
+    const bar = document.createElement('div');
+    bar.id = 'xf-remove-bar';
+    bar.appendChild(btn);
+    bar.appendChild(status);
+    const main = document.querySelector('main, [role="main"]');
+    if (main) main.prepend(bar);
+  }
 
-  btn.addEventListener('click', () => handleRemoveFlagged(btn, status));
+  btn.addEventListener('click', () => handleRemoveFlagged(status));
 }
 
-async function handleRemoveFlagged(btn, statusEl) {
+async function handleRemoveFlagged(statusEl) {
   statusEl.textContent = '';
   statusEl.className = '';
 
@@ -123,45 +152,42 @@ async function handleRemoveFlagged(btn, statusEl) {
     statusEl.textContent = 'No flagged invoices found on this page.';
     statusEl.className = 'xf-info';
   } else {
-    statusEl.textContent = `✓ ${ticked} invoice${ticked !== 1 ? 's' : ''} selected.${notFound ? ` (${notFound} not on this page)` : ''}`;
+    statusEl.textContent = `✓ ${ticked} selected.${notFound ? ` (${notFound} not on this page)` : ''}`;
     statusEl.className = 'xf-success';
   }
 }
 
-// Returns a Map of invoiceId → table row for rows currently rendered
+// Returns Map of invoiceId → table row for all rows currently rendered.
+// Xero SPA list links: href="/app/!!Qb4n/bills/view/bill?id=UUID"
 function getRowsByInvoiceId() {
   const map = new Map();
-  document.querySelectorAll('a[href*="InvoiceID="], a[href*="invoiceId="]').forEach(a => {
-    const m = a.href.match(/[Ii]nvoice[Ii][Dd]=([a-f0-9-]+)/i);
+  document.querySelectorAll('a[href*="bills/view/bill"]').forEach(a => {
+    const m = a.href.match(/[?&]id=([a-f0-9-]+)/i);
     if (!m) return;
     const id = m[1].toLowerCase();
-    const row = a.closest('tr, [role="row"], li');
+    const row = a.closest('tr, [role="row"]');
     if (row && !map.has(id)) map.set(id, row);
   });
   return map;
 }
-
 
 async function highlightFlaggedRows(flagged) {
   document.querySelectorAll('.xf-row-flagged').forEach(el => el.classList.remove('xf-row-flagged'));
   const ids = Object.keys(flagged);
   if (ids.length === 0) return;
 
-  document.querySelectorAll('a[href*="InvoiceID="], a[href*="invoiceId="]').forEach(a => {
-    const m = a.href.match(/[Ii]nvoice[Ii][Dd]=([a-f0-9-]+)/i);
+  document.querySelectorAll('a[href*="bills/view/bill"]').forEach(a => {
+    const m = a.href.match(/[?&]id=([a-f0-9-]+)/i);
     if (m && flagged[m[1].toLowerCase()]) {
-      const row = a.closest('tr, [role="row"], li');
+      const row = a.closest('tr, [role="row"]');
       if (row) row.classList.add('xf-row-flagged');
     }
   });
 }
 
 async function initAwaitingPaymentPage() {
-  await new Promise(r => setTimeout(r, 800));
-
-  const container = document.querySelector('main, .x-main-content, [class*="content"], body');
-  if (container) buildRemoveUI(container);
-
+  await new Promise(r => setTimeout(r, 900));
+  buildRemoveUI();
   const flagged = await getFlagged();
   highlightFlaggedRows(flagged);
 }
@@ -180,7 +206,7 @@ let lastUrl = location.href;
 new MutationObserver(() => {
   if (location.href !== lastUrl) {
     lastUrl = location.href;
-    setTimeout(init, 600);
+    setTimeout(init, 700);
   }
 }).observe(document.body, { subtree: true, childList: true });
 

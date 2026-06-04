@@ -45,6 +45,15 @@
 
 /* ── Remove Flagged bar on awaiting-payment page ── */
 
+/* Wrapper when inserted into Make Payment toolbar */
+#xf-remove-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 8px;
+}
+
+/* Fallback bar when toolbar not found */
 #xf-remove-bar {
   display: flex;
   align-items: center;
@@ -56,21 +65,12 @@
   margin: 12px 0;
 }
 
-#xf-remove-btn {
-  padding: 8px 18px;
-  font-size: 14px;
-  font-weight: 700;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  background: #ff6d00;
-  color: #fff;
-  transition: background 0.15s;
-  white-space: nowrap;
-}
-
-#xf-remove-btn:hover {
-  background: #e65100;
+/* Fixed fallback for flag button when toolbar not found */
+#xf-flag-btn.xf-fixed {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
 }
 
 #xf-status {
