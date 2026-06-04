@@ -55,11 +55,11 @@ async function initInvoicePage() {
   if (!invoiceId) return;
   if (document.getElementById('xf-flag-btn')) return;
 
-  const flagged = await getFlagged();
-
-  // Preserve scroll position — async gap above can let the page scroll-restore
-  // before we insert the button, and prepend() then shifts the layout.
+  // Capture scroll before the async gap — Xero's SPA scroll-restore can fire
+  // during the await and scroll to the bottom; we want to lock to where we are now.
   const savedScroll = window.scrollY;
+
+  const flagged = await getFlagged();
 
   const btn = document.createElement('button');
   btn.id = 'xf-flag-btn';
