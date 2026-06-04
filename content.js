@@ -123,7 +123,18 @@ async function initInvoicePage() {
     document.body.appendChild(btn);
   }
 
-  window.scrollTo({ top: savedScroll, behavior: 'instant' });
+  // Xero's own scroll-restoration fires after our code and overrides a single scrollTo.
+  // Hold the position for ~600ms by intercepting the first externally-triggered scroll.
+  let guarding = true;
+  const guardScroll = () => {
+    if (guarding) window.scrollTo(0, savedScroll);
+  };
+  window.addEventListener('scroll', guardScroll, { passive: true });
+  window.scrollTo(0, savedScroll);
+  setTimeout(() => {
+    guarding = false;
+    window.removeEventListener('scroll', guardScroll);
+  }, 600);
 }
 
 // ─── Awaiting payment list page ───────────────────────────────────────────────
