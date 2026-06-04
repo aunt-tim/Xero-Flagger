@@ -1,10 +1,11 @@
 const STORAGE_KEY = 'xeroFlaggedInvoices';
 
+let sortCol = 'flaggedAt';
+let sortDir = 'desc'; // 'asc' | 'desc'
+
 async function getFlagged() {
   return new Promise(resolve => {
-    chrome.storage.local.get([STORAGE_KEY], result => {
-      resolve(result[STORAGE_KEY] || {});
-    });
+    chrome.storage.local.get([STORAGE_KEY], r => resolve(r[STORAGE_KEY] || {}));
   });
 }
 
@@ -15,87 +16,151 @@ async function setFlagged(data) {
 }
 
 function formatDate(ts) {
-  const d = new Date(ts);
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(ts).toLocaleDateString(undefined, {
+    day: 'numeric', month: 'short', year: 'numeric'
+  });
+}
+
+function parseAmount(str) {
+  if (!str) return -Infinity;
+  const n = parseFloat(str.replace(/[^0-9.\-]/g, ''));
+  return isNaN(n) ? -Infinity : n;
+}
+
+function sortEntries(entries) {
+  return [...entries].sort((a, b) => {
+    const [, ai] = a;
+    const [, bi] = b;
+    let av, bv;
+
+    if (sortCol === 'flaggedAt') {
+      av = ai.flaggedAt || 0;
+      bv = bi.flaggedAt || 0;
+    } else if (sortCol === 'amount') {
+      av = parseAmount(ai.amount);
+      bv = parseAmount(bi.amount);
+    } else {
+      av = (ai[sortCol] || '').toLowerCase();
+      bv = (bi[sortCol] || '').toLowerCase();
+    }
+
+    if (av < bv) return sortDir === 'asc' ? -1 : 1;
+    if (av > bv) return sortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+}
+
+function updateSortHeaders() {
+  document.querySelectorAll('th[data-col]').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.dataset.col === sortCol) {
+      th.classList.add(sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+  });
 }
 
 async function render() {
   const flagged = await getFlagged();
-  const entries = Object.entries(flagged).sort((a, b) => b[1].flaggedAt - a[1].flaggedAt);
+  const entries = Object.entries(flagged);
 
-  const list = document.getElementById('invoice-list');
-  const empty = document.getElementById('empty-state');
-  const badge = document.getElementById('count-badge');
-
-  list.innerHTML = '';
+  const tableWrap = document.getElementById('table-wrap');
+  const emptyState = document.getElementById('empty-state');
+  const tbody = document.getElementById('invoice-tbody');
+  const countLabel = document.getElementById('count-label');
+  const clearBtn = document.getElementById('clear-all-btn');
 
   if (entries.length === 0) {
-    empty.classList.remove('hidden');
-    badge.textContent = '';
+    tableWrap.classList.add('hidden');
+    emptyState.classList.remove('hidden');
+    countLabel.textContent = '';
+    clearBtn.classList.add('hidden');
     return;
   }
 
-  empty.classList.add('hidden');
-  badge.textContent = entries.length;
+  emptyState.classList.add('hidden');
+  tableWrap.classList.remove('hidden');
+  countLabel.textContent = `${entries.length} invoice${entries.length !== 1 ? 's' : ''} flagged`;
+  clearBtn.classList.remove('hidden');
 
-  for (const [id, inv] of entries) {
-    const li = document.createElement('li');
-    li.className = 'invoice-item';
+  updateSortHeaders();
 
-    const info = document.createElement('div');
-    info.className = 'invoice-info';
+  const sorted = sortEntries(entries);
+  tbody.innerHTML = '';
 
-    const supplier = document.createElement('div');
-    supplier.className = 'invoice-supplier';
+  for (const [id, inv] of sorted) {
+    const tr = document.createElement('tr');
+
+    // Supplier
+    const tdS = document.createElement('td');
+    tdS.className = 'td-supplier';
     if (inv.url) {
       const a = document.createElement('a');
       a.href = inv.url;
       a.textContent = inv.label || id;
       a.target = '_blank';
-      supplier.appendChild(a);
+      tdS.appendChild(a);
     } else {
-      supplier.textContent = inv.label || id;
+      tdS.textContent = inv.label || id;
     }
+    tr.appendChild(tdS);
 
-    const meta = document.createElement('div');
-    meta.className = 'invoice-meta';
+    // Reference
+    const tdR = document.createElement('td');
+    tdR.className = 'td-ref';
+    tdR.textContent = inv.reference || '—';
+    tdR.title = inv.reference || '';
+    tr.appendChild(tdR);
 
-    if (inv.reference) {
-      const ref = document.createElement('span');
-      ref.className = 'meta-ref';
-      ref.textContent = inv.reference;
-      meta.appendChild(ref);
-    }
+    // Amount
+    const tdA = document.createElement('td');
+    tdA.className = 'td-amount';
+    tdA.textContent = inv.amount || '—';
+    tr.appendChild(tdA);
 
-    if (inv.amount) {
-      const amt = document.createElement('span');
-      amt.className = 'meta-amount';
-      amt.textContent = inv.amount;
-      meta.appendChild(amt);
-    }
+    // Date flagged
+    const tdD = document.createElement('td');
+    tdD.className = 'td-date';
+    tdD.textContent = formatDate(inv.flaggedAt);
+    tr.appendChild(tdD);
 
-    const date = document.createElement('span');
-    date.className = 'meta-date';
-    date.textContent = formatDate(inv.flaggedAt);
-    meta.appendChild(date);
-
-    info.appendChild(supplier);
-    info.appendChild(meta);
-
-    const unflagBtn = document.createElement('button');
-    unflagBtn.className = 'unflag-btn';
-    unflagBtn.textContent = 'Unflag';
-    unflagBtn.addEventListener('click', async () => {
+    // Unflag
+    const tdU = document.createElement('td');
+    tdU.className = 'td-action';
+    const btn = document.createElement('button');
+    btn.className = 'unflag-btn';
+    btn.textContent = 'Unflag';
+    btn.addEventListener('click', async () => {
       const current = await getFlagged();
       delete current[id];
       await setFlagged(current);
       render();
     });
+    tdU.appendChild(btn);
+    tr.appendChild(tdU);
 
-    li.appendChild(info);
-    li.appendChild(unflagBtn);
-    list.appendChild(li);
+    tbody.appendChild(tr);
   }
 }
+
+// Sort on header click
+document.querySelectorAll('th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (sortCol === col) {
+      sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortCol = col;
+      sortDir = col === 'flaggedAt' || col === 'amount' ? 'desc' : 'asc';
+    }
+    render();
+  });
+});
+
+// Clear all
+document.getElementById('clear-all-btn').addEventListener('click', async () => {
+  if (!confirm('Remove all flags?')) return;
+  await setFlagged({});
+  render();
+});
 
 render();

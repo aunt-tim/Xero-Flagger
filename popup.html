@@ -2,26 +2,53 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Xero Flagger</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="header">
-    <div class="header-title">
-      <span class="flag-icon">⚑</span>
-      Flagged Invoices
-    </div>
-    <span id="count-badge" class="count-badge"></span>
-  </div>
+  <div class="page">
 
-  <div id="list-container">
+    <header class="header">
+      <div class="header-left">
+        <span class="logo">⚑</span>
+        <h1>Flagged Invoices</h1>
+      </div>
+      <div class="header-right">
+        <span id="count-label" class="count-label"></span>
+        <button id="clear-all-btn" class="btn-danger hidden">Clear All</button>
+      </div>
+    </header>
+
     <div id="empty-state" class="empty-state hidden">
-      <p>No invoices flagged yet.</p>
-      <p class="sub">Open a bill in Xero and press <strong>Flag</strong>.</p>
+      <div class="empty-icon">⚑</div>
+      <p class="empty-title">No flagged invoices</p>
+      <p class="empty-sub">Open a bill in Xero and press <strong>Flag</strong> to add it here.</p>
     </div>
-    <ul id="invoice-list"></ul>
+
+    <div id="table-wrap" class="table-wrap hidden">
+      <table id="invoice-table">
+        <thead>
+          <tr>
+            <th data-col="label" class="sortable">
+              Supplier <span class="sort-icon">↕</span>
+            </th>
+            <th data-col="reference" class="sortable">
+              Reference <span class="sort-icon">↕</span>
+            </th>
+            <th data-col="amount" class="sortable th-right">
+              Amount <span class="sort-icon">↕</span>
+            </th>
+            <th data-col="flaggedAt" class="sortable">
+              Flagged <span class="sort-icon">↕</span>
+            </th>
+            <th class="th-action"></th>
+          </tr>
+        </thead>
+        <tbody id="invoice-tbody"></tbody>
+      </table>
+    </div>
+
   </div>
+  <script src="popup.js"></script>
 </body>
-<script src="popup.js"></script>
 </html>
