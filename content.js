@@ -249,6 +249,8 @@ async function highlightFlaggedRows(flagged) {
   const ids = Object.keys(flagged);
   if (ids.length === 0) return;
 
+  const badgedRows = new Set();
+
   document.querySelectorAll('a[href*="bills/view/bill"]').forEach(a => {
     const m = a.href.match(/[?&]id=([a-f0-9-]+)/i);
     if (!m || !flagged[m[1].toLowerCase()]) return;
@@ -257,14 +259,17 @@ async function highlightFlaggedRows(flagged) {
 
     row.classList.add('xf-row-flagged');
 
-    // Inject flag badge into the supplier name cell (the cell containing the bill link)
-    const cell = a.closest('td, [role="cell"], [role="gridcell"]') || a.parentElement;
-    if (cell && !cell.querySelector('.xf-flag-badge')) {
-      const badge = document.createElement('span');
-      badge.className = 'xf-flag-badge';
-      badge.textContent = 'FLAG';
-      badge.title = 'Flagged — will be deselected by De-Select Flagged';
-      cell.insertBefore(badge, cell.firstChild);
+    // Only badge once per row, in the first matching cell (the From/supplier column)
+    if (!badgedRows.has(row)) {
+      badgedRows.add(row);
+      const cell = a.closest('td, [role="cell"], [role="gridcell"]') || a.parentElement;
+      if (cell) {
+        const badge = document.createElement('span');
+        badge.className = 'xf-flag-badge';
+        badge.textContent = 'Flagged';
+        badge.title = 'Will be de-selected by De-Select Flagged';
+        cell.insertBefore(badge, cell.firstChild);
+      }
     }
   });
 }
