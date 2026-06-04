@@ -124,6 +124,8 @@ async function handleRemoveFlagged(statusEl) {
   statusEl.textContent = '';
   statusEl.className = '';
 
+  const btn = document.getElementById('xf-flag-btn-remove');
+
   const flagged = await getFlagged();
   const flaggedIds = Object.keys(flagged);
 
@@ -134,7 +136,7 @@ async function handleRemoveFlagged(statusEl) {
   }
 
   const rowMap = getRowsByInvoiceId();
-  let ticked = 0;
+  let unchecked = 0;
   let notFound = 0;
 
   for (const id of flaggedIds) {
@@ -142,17 +144,19 @@ async function handleRemoveFlagged(statusEl) {
     if (row) {
       const checkbox = row.querySelector('input[type="checkbox"]');
       if (checkbox && checkbox.checked) checkbox.click();
-      ticked++;
+      unchecked++;
     } else {
       notFound++;
     }
   }
 
-  if (ticked === 0) {
-    statusEl.textContent = 'No flagged invoices found on this page.';
-    statusEl.className = 'xf-info';
+  if (btn) btn.classList.add('xf-done');
+
+  if (unchecked === 0) {
+    statusEl.textContent = '✓ Flagged items removed';
+    statusEl.className = 'xf-success';
   } else {
-    statusEl.textContent = `✓ ${ticked} selected.${notFound ? ` (${notFound} not on this page)` : ''}`;
+    statusEl.textContent = `✓ Flagged items removed${notFound ? ` (${notFound} not on this page)` : ''}`;
     statusEl.className = 'xf-success';
   }
 }

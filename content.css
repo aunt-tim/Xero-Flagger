@@ -1,46 +1,47 @@
 /* ── Flag button on invoice detail page ── */
+/* Unflagged: outlined red, styled to match Xero's XUI standard button */
 
 #xf-flag-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 20px;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  border: none;
-  border-radius: 6px;
+  height: 32px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: 0;
+  border: 1px solid #e53935;
+  border-radius: 4px;
   cursor: pointer;
-  background: #e53935;
-  color: #fff;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  background: #fff;
+  color: #e53935;
+  box-shadow: none;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
   margin-right: 8px;
+  vertical-align: middle;
 }
 
 #xf-flag-btn:hover {
-  background: #b71c1c;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  background: #fdecea;
 }
 
 #xf-flag-btn:active {
-  transform: scale(0.96);
+  background: #fbd0ce;
 }
 
-/* Flagged / active state — bright rainbow pulse */
+/* Flagged state — solid red */
 #xf-flag-btn.xf-flagged {
-  background: linear-gradient(135deg, #ff1744, #ff6d00, #ffd600, #00e676, #2979ff, #d500f9);
-  background-size: 300% 300%;
-  animation: xf-rainbow 1.8s ease infinite;
+  background: #e53935;
   color: #fff;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
-  box-shadow: 0 0 18px 4px rgba(255, 23, 68, 0.6);
+  border-color: #e53935;
+  animation: none;
+  box-shadow: none;
 }
 
-@keyframes xf-rainbow {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+#xf-flag-btn.xf-flagged:hover {
+  background: #b71c1c;
+  border-color: #b71c1c;
 }
 
 /* ── Remove Flagged bar on awaiting-payment page ── */
@@ -53,14 +54,25 @@
   margin-right: 8px;
 }
 
+/* Remove Flagged button — red until pressed */
 #xf-flag-btn-remove {
   background: #e53935 !important;
   color: #fff !important;
   border: none !important;
+  transition: background 0.15s !important;
 }
 
 #xf-flag-btn-remove:hover {
   background: #b71c1c !important;
+}
+
+/* After pressed — muted/done state */
+#xf-flag-btn-remove.xf-done {
+  background: #f5f5f5 !important;
+  color: #999 !important;
+  border: 1px solid #ddd !important;
+  cursor: default !important;
+  pointer-events: none !important;
 }
 
 /* Fallback bar when toolbar not found */
@@ -84,13 +96,17 @@
 }
 
 #xf-status {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
+  color: #1ab5d4;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
-#xf-status.xf-success { color: #2e7d32; }
+#xf-status.xf-success { color: #1ab5d4; }
 #xf-status.xf-warn    { color: #f57f17; }
-#xf-status.xf-info    { color: #1565c0; }
+#xf-status.xf-info    { color: #1ab5d4; }
 
 /* ── Highlight flagged rows in the bill list ── */
 
