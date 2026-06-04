@@ -242,15 +242,29 @@ function getRowsByInvoiceId() {
 }
 
 async function highlightFlaggedRows(flagged) {
+  // Clear previous state
   document.querySelectorAll('.xf-row-flagged').forEach(el => el.classList.remove('xf-row-flagged'));
+  document.querySelectorAll('.xf-flag-badge').forEach(el => el.remove());
+
   const ids = Object.keys(flagged);
   if (ids.length === 0) return;
 
   document.querySelectorAll('a[href*="bills/view/bill"]').forEach(a => {
     const m = a.href.match(/[?&]id=([a-f0-9-]+)/i);
-    if (m && flagged[m[1].toLowerCase()]) {
-      const row = a.closest('tr, [role="row"]');
-      if (row) row.classList.add('xf-row-flagged');
+    if (!m || !flagged[m[1].toLowerCase()]) return;
+    const row = a.closest('tr, [role="row"]');
+    if (!row) return;
+
+    row.classList.add('xf-row-flagged');
+
+    // Inject flag badge into the supplier name cell (the cell containing the bill link)
+    const cell = a.closest('td, [role="cell"], [role="gridcell"]') || a.parentElement;
+    if (cell && !cell.querySelector('.xf-flag-badge')) {
+      const badge = document.createElement('span');
+      badge.className = 'xf-flag-badge';
+      badge.textContent = 'FLAG';
+      badge.title = 'Flagged — will be deselected by Remove Flagged';
+      cell.insertBefore(badge, cell.firstChild);
     }
   });
 }
