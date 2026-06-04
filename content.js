@@ -49,7 +49,6 @@ async function initInvoicePage() {
       delete current[invoiceId];
       btn.className = '';
     } else {
-      // Grab a label for display in the awaiting-payment list
       const fromEl = document.querySelector('table td a, .from a, [data-automationid="contact-name"]');
       const label = fromEl ? fromEl.textContent.trim() : invoiceId;
       current[invoiceId] = { label, flaggedAt: Date.now() };
@@ -58,12 +57,10 @@ async function initInvoicePage() {
     await setFlagged(current);
   });
 
-  // Insert the button into the page — try the print/options toolbar first
   const toolbar = document.querySelector('.invoice-options, .x-invoice-header, .invoice-header, [class*="invoiceHeader"], .button-group');
   if (toolbar) {
     toolbar.prepend(btn);
   } else {
-    // Fallback: fixed position
     btn.style.position = 'fixed';
     btn.style.top = '80px';
     btn.style.right = '24px';
@@ -91,52 +88,77 @@ function buildRemoveUI(container) {
   bar.appendChild(status);
   container.prepend(bar);
 
-  btn.addEventListener('click', () => handleRemoveFlagged(status));
+  btn.addEventListener('click', () => handleRemoveFlagged(btn, status));
 }
 
-async function handleRemoveFlagged(statusEl) {
+async function handleRemoveFlagged(btn, statusEl) {
   statusEl.textContent = '';
   statusEl.className = '';
 
   const flagged = await getFlagged();
-  const flaggedIds = Object.keys(flagged);
+  const remaining = new Set(Object.keys(flagged));
 
-  if (flaggedIds.length === 0) {
+  if (remaining.size === 0) {
     statusEl.textContent = 'No invoices are flagged.';
     statusEl.className = 'xf-info';
     return;
   }
 
-  // Find rows for flagged invoices and tick their checkboxes
-  const rowMap = getRowsByInvoiceId();
-  let ticked = 0;
-  let notFound = 0;
+  btn.disabled = true;
+  btn.textContent = 'Working…';
 
-  for (const id of flaggedIds) {
-    const row = rowMap.get(id);
-    if (row) {
-      const checkbox = row.querySelector('input[type="checkbox"]');
-      if (checkbox && !checkbox.checked) {
-        // Trigger a real click so Xero's React/Angular handlers fire
-        checkbox.click();
-      }
-      ticked++;
-    } else {
-      notFound++;
-    }
-  }
+  let totalTicked = 0;
+  let pageNum = 1;
 
-  if (ticked === 0) {
-    statusEl.textContent = 'No flagged invoices found on this page.';
+  // Rewind to page 1 before starting
+  await goToPage(1);
+
+  while (remaining.size > 0) {
+    await waitForListLoad();
+
+    statusEl.textContent = `Scanning page ${pageNum}…`;
     statusEl.className = 'xf-info';
-    return;
+
+    const rowMap = getRowsByInvoiceId();
+
+    for (const id of [...remaining]) {
+      const row = rowMap.get(id);
+      if (row) {
+        const checkbox = row.querySelector('input[type="checkbox"]');
+        if (checkbox && !checkbox.checked) checkbox.click();
+        totalTicked++;
+        remaining.delete(id);
+      }
+    }
+
+    // If all flagged found, stop early
+    if (remaining.size === 0) break;
+
+    const nextBtn = getNextPageButton();
+    if (!nextBtn) break; // no more pages
+
+    nextBtn.click();
+    pageNum++;
+    // Wait for the page transition before rescanning
+    await new Promise(r => setTimeout(r, 300));
   }
 
-  statusEl.textContent = `✓ ${ticked} invoice${ticked !== 1 ? 's' : ''} selected.${notFound ? ` (${notFound} not on this page)` : ''}`;
-  statusEl.className = 'xf-success';
+  btn.disabled = false;
+  btn.textContent = 'Remove Flagged';
+
+  if (totalTicked === 0) {
+    statusEl.textContent = 'None of the flagged invoices were found in this list.';
+    statusEl.className = 'xf-info';
+  } else if (remaining.size === 0) {
+    statusEl.textContent = `✓ All ${totalTicked} flagged invoice${totalTicked !== 1 ? 's' : ''} selected across ${pageNum} page${pageNum !== 1 ? 's' : ''}.`;
+    statusEl.className = 'xf-success';
+  } else {
+    statusEl.textContent = `✓ ${totalTicked} selected. ${remaining.size} flagged invoice${remaining.size !== 1 ? 's' : ''} not found in this list.`;
+    statusEl.className = 'xf-warn';
+  }
 }
 
-// Returns a Map of invoiceId → table row element for every row currently in the list
+// Returns a Map of invoiceId → table row for rows currently rendered
 function getRowsByInvoiceId() {
   const map = new Map();
   document.querySelectorAll('a[href*="InvoiceID="], a[href*="invoiceId="]').forEach(a => {
@@ -149,25 +171,85 @@ function getRowsByInvoiceId() {
   return map;
 }
 
-async function highlightFlaggedRows(flagged) {
-  // Remove existing highlights
-  document.querySelectorAll('.xf-row-flagged').forEach(el => el.classList.remove('xf-row-flagged'));
+// Find the "next page" button in Xero's pagination controls
+function getNextPageButton() {
+  // Xero uses various pagination patterns — try common selectors
+  const selectors = [
+    'button[aria-label="Next page"]',
+    'a[aria-label="Next page"]',
+    '[data-automationid="pagination-next"]',
+    'button.pagination-next',
+    'a.pagination-next',
+    // Generic: a button/link containing only "›" or "Next" that isn't disabled
+    'nav button:not([disabled])',
+    'nav a',
+  ];
 
+  for (const sel of selectors) {
+    for (const el of document.querySelectorAll(sel)) {
+      const text = el.textContent.trim();
+      const label = (el.getAttribute('aria-label') || '').toLowerCase();
+      if (
+        label.includes('next') ||
+        text === '›' || text === '»' || text === '>' ||
+        text.toLowerCase() === 'next'
+      ) {
+        if (!el.disabled && !el.closest('[disabled]') && !el.classList.contains('disabled')) {
+          return el;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+// Navigate to page 1 if pagination controls support it
+async function goToPage(pageNumber) {
+  if (pageNumber !== 1) return;
+  const selectors = [
+    'button[aria-label="First page"]',
+    'a[aria-label="First page"]',
+    '[data-automationid="pagination-first"]',
+  ];
+  for (const sel of selectors) {
+    const el = document.querySelector(sel);
+    if (el && !el.disabled) { el.click(); await new Promise(r => setTimeout(r, 300)); return; }
+  }
+  // Fallback: find page 1 button by text
+  for (const el of document.querySelectorAll('nav button, nav a')) {
+    if (el.textContent.trim() === '1') { el.click(); await new Promise(r => setTimeout(r, 300)); return; }
+  }
+}
+
+// Wait for the list rows to be present after a page change
+function waitForListLoad(timeout = 3000) {
+  return new Promise(resolve => {
+    const start = Date.now();
+    const check = () => {
+      const rows = document.querySelectorAll('a[href*="InvoiceID="], a[href*="invoiceId="]');
+      if (rows.length > 0) return resolve();
+      if (Date.now() - start > timeout) return resolve();
+      setTimeout(check, 150);
+    };
+    check();
+  });
+}
+
+async function highlightFlaggedRows(flagged) {
+  document.querySelectorAll('.xf-row-flagged').forEach(el => el.classList.remove('xf-row-flagged'));
   const ids = Object.keys(flagged);
   if (ids.length === 0) return;
 
   document.querySelectorAll('a[href*="InvoiceID="], a[href*="invoiceId="]').forEach(a => {
     const m = a.href.match(/[Ii]nvoice[Ii][Dd]=([a-f0-9-]+)/i);
     if (m && flagged[m[1].toLowerCase()]) {
-      // Walk up to the table row
-      let row = a.closest('tr, [role="row"], li');
+      const row = a.closest('tr, [role="row"], li');
       if (row) row.classList.add('xf-row-flagged');
     }
   });
 }
 
 async function initAwaitingPaymentPage() {
-  // Wait briefly for React/Angular to render the list
   await new Promise(r => setTimeout(r, 800));
 
   const container = document.querySelector('main, .x-main-content, [class*="content"], body');
@@ -187,12 +269,10 @@ function init() {
   }
 }
 
-// Xero is a SPA — listen for URL changes
 let lastUrl = location.href;
 new MutationObserver(() => {
   if (location.href !== lastUrl) {
     lastUrl = location.href;
-    // Small delay to let the SPA render
     setTimeout(init, 600);
   }
 }).observe(document.body, { subtree: true, childList: true });
