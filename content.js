@@ -139,7 +139,7 @@ function buildRemoveUI() {
   const btn = document.createElement('button');
   btn.id = 'xf-flag-btn-remove';
   btn.className = 'xui-button xui-button-standard xui-button-small';
-  btn.textContent = 'Remove Flagged';
+  btn.textContent = 'De-Select Flagged';
 
   const status = document.createElement('span');
   status.id = 'xf-status';
@@ -216,12 +216,12 @@ async function handleRemoveFlagged(statusEl) {
   if (btn) {
     btn.classList.remove('xf-active');
     btn.classList.add('xf-success-flash');
-    btn.textContent = '✓ Removed';
+    btn.textContent = '✓ De-selected';
     statusEl.textContent = '';
     statusEl.className = '';
     setTimeout(() => {
       btn.classList.remove('xf-success-flash');
-      btn.textContent = 'Remove Flagged';
+      btn.textContent = 'De-Select Flagged';
       syncRemoveButton();
     }, 2500);
   }
@@ -263,7 +263,7 @@ async function highlightFlaggedRows(flagged) {
       const badge = document.createElement('span');
       badge.className = 'xf-flag-badge';
       badge.textContent = 'FLAG';
-      badge.title = 'Flagged — will be deselected by Remove Flagged';
+      badge.title = 'Flagged — will be deselected by De-Select Flagged';
       cell.insertBefore(badge, cell.firstChild);
     }
   });
