@@ -55,15 +55,11 @@ async function initInvoicePage() {
   if (!invoiceId) return;
   if (document.getElementById('xf-flag-btn')) return;
 
-  // Capture scroll before the async gap — Xero's SPA scroll-restore can fire
-  // during the await and scroll to the bottom; we want to lock to where we are now.
-  const savedScroll = window.scrollY;
-
   const flagged = await getFlagged();
 
   const btn = document.createElement('button');
   btn.id = 'xf-flag-btn';
-  btn.textContent = 'Flag';
+  btn.textContent = 'Flag for non-payment';
   btn.className = flagged[invoiceId] ? 'xf-flagged' : '';
 
   btn.addEventListener('click', async () => {
@@ -108,8 +104,30 @@ async function initInvoicePage() {
     await setFlagged(current);
   });
 
-  // Insert next to Print PDF / Bill Options toolbar
-  // XUI page heading right-content holds the action buttons
+  // Wait for the page to stop scrolling before inserting the button.
+  // Xero's legacy page runs its own scroll-restoration after document_idle;
+  // inserting into the DOM during that window causes the page to jump to the
+  // bottom. We watch for scroll events and only insert once 200ms of silence
+  // has passed, with a hard fallback at 2 s.
+  await new Promise(resolve => {
+    let timer = setTimeout(resolve, 2000);
+    const onScroll = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        window.removeEventListener('scroll', onScroll, { passive: true });
+        resolve();
+      }, 200);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    // If the page is already settled (no scroll within 200ms), resolve quickly
+    timer = setTimeout(() => {
+      window.removeEventListener('scroll', onScroll, { passive: true });
+      resolve();
+    }, 200);
+  });
+
+  if (document.getElementById('xf-flag-btn')) return; // guard re-check after wait
+
   const toolbar = document.querySelector(
     '.xui-pageheading--actions .xui-actions, ' +
     '.xui-pageheading--rightcontent, ' +
@@ -122,19 +140,6 @@ async function initInvoicePage() {
     btn.classList.add('xf-fixed');
     document.body.appendChild(btn);
   }
-
-  // Xero's own scroll-restoration fires after our code and overrides a single scrollTo.
-  // Hold the position for ~600ms by intercepting the first externally-triggered scroll.
-  let guarding = true;
-  const guardScroll = () => {
-    if (guarding) window.scrollTo(0, savedScroll);
-  };
-  window.addEventListener('scroll', guardScroll, { passive: true });
-  window.scrollTo(0, savedScroll);
-  setTimeout(() => {
-    guarding = false;
-    window.removeEventListener('scroll', guardScroll);
-  }, 600);
 }
 
 // ─── Awaiting payment list page ───────────────────────────────────────────────
