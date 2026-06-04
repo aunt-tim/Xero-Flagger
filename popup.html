@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Xero Flagger</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="header">
+    <div class="header-title">
+      <span class="flag-icon">⚑</span>
+      Flagged Invoices
+    </div>
+    <span id="count-badge" class="count-badge"></span>
+  </div>
+
+  <div id="list-container">
+    <div id="empty-state" class="empty-state hidden">
+      <p>No invoices flagged yet.</p>
+      <p class="sub">Open a bill in Xero and press <strong>Flag</strong>.</p>
+    </div>
+    <ul id="invoice-list"></ul>
+  </div>
+</body>
+<script src="popup.js"></script>
+</html>

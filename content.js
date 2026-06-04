@@ -38,6 +38,16 @@ async function setFlagged(data) {
   });
 }
 
+// Scan legacy table/label layout for a field by its label text
+function findLegacyField(labelText) {
+  for (const el of document.querySelectorAll('td, th, label, dt, .label')) {
+    if (el.textContent.trim().toLowerCase() === labelText.toLowerCase()) {
+      return el.nextElementSibling || el.parentElement?.nextElementSibling;
+    }
+  }
+  return null;
+}
+
 // ─── Invoice detail page ──────────────────────────────────────────────────────
 
 async function initInvoicePage() {
@@ -62,7 +72,25 @@ async function initInvoicePage() {
         '.xui-pageheading--title, [data-automationid="contact-name"], h1'
       );
       const label = fromEl ? fromEl.textContent.trim() : invoiceId;
-      current[invoiceId] = { label, flaggedAt: Date.now() };
+
+      // Reference: try SPA automationid first, then legacy table label
+      const refEl = document.querySelector(
+        '[data-automationid="reference-value"], ' +
+        '[data-automationid="invoice-reference"], ' +
+        '.invoice-reference-value'
+      ) || findLegacyField('Reference');
+      const reference = refEl ? refEl.textContent.trim() : '';
+
+      // Amount due / total: try common selectors across SPA and legacy
+      const amountEl = document.querySelector(
+        '[data-automationid="amount-due-value"], ' +
+        '[data-automationid="invoice-amount-due"], ' +
+        '.total-amount-value, ' +
+        '.xui-u-text-align-right.amount-cell .amount'
+      ) || findLegacyField('Amount Due') || findLegacyField('Total');
+      const amount = amountEl ? amountEl.textContent.trim() : '';
+
+      current[invoiceId] = { label, reference, amount, flaggedAt: Date.now(), url: location.href };
       btn.className = 'xf-flagged';
     }
     await setFlagged(current);

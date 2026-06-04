@@ -1,0 +1,180 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  color: #333;
+  width: 380px;
+  min-height: 60px;
+  max-height: 520px;
+  display: flex;
+  flex-direction: column;
+  background: #f7f8fa;
+}
+
+/* ── Header ── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 12px;
+  background: #fff;
+  border-bottom: 1px solid #e8eaed;
+}
+
+.header-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a2e;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.flag-icon {
+  color: #e53935;
+  font-size: 16px;
+}
+
+.count-badge {
+  background: #e53935;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 2px 8px;
+  min-width: 22px;
+  text-align: center;
+}
+
+.count-badge:empty {
+  display: none;
+}
+
+/* ── List ── */
+
+#list-container {
+  overflow-y: auto;
+  flex: 1;
+}
+
+#invoice-list {
+  list-style: none;
+  padding: 8px 0;
+}
+
+.invoice-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 16px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.1s;
+}
+
+.invoice-item:last-child {
+  border-bottom: none;
+}
+
+.invoice-item:hover {
+  background: #fafafa;
+}
+
+.invoice-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.invoice-supplier {
+  font-weight: 600;
+  font-size: 13px;
+  color: #1a1a2e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.invoice-supplier a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.invoice-supplier a:hover {
+  color: #1ab5d4;
+  text-decoration: underline;
+}
+
+.invoice-meta {
+  display: flex;
+  gap: 10px;
+  margin-top: 3px;
+  font-size: 12px;
+  color: #777;
+  flex-wrap: wrap;
+}
+
+.meta-ref {
+  color: #555;
+  font-weight: 500;
+}
+
+.meta-amount {
+  color: #1a1a2e;
+  font-weight: 700;
+}
+
+.meta-date {
+  color: #aaa;
+  margin-left: auto;
+}
+
+.unflag-btn {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: #aaa;
+  font-size: 12px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  margin-top: 1px;
+}
+
+.unflag-btn:hover {
+  border-color: #e53935;
+  color: #e53935;
+  background: #fff5f5;
+}
+
+/* ── Empty state ── */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 20px;
+  text-align: center;
+  color: #aaa;
+  gap: 6px;
+}
+
+.empty-state .sub {
+  font-size: 12px;
+  color: #bbb;
+}
+
+.empty-state strong {
+  color: #e53935;
+}
+
+.hidden {
+  display: none;
+}
