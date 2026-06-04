@@ -53,6 +53,16 @@
   margin-right: 8px;
 }
 
+#xf-flag-btn-remove {
+  background: #e53935 !important;
+  color: #fff !important;
+  border: none !important;
+}
+
+#xf-flag-btn-remove:hover {
+  background: #b71c1c !important;
+}
+
 /* Fallback bar when toolbar not found */
 #xf-remove-bar {
   display: flex;
