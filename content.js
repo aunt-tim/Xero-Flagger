@@ -57,6 +57,10 @@ async function initInvoicePage() {
 
   const flagged = await getFlagged();
 
+  // Preserve scroll position — async gap above can let the page scroll-restore
+  // before we insert the button, and prepend() then shifts the layout.
+  const savedScroll = window.scrollY;
+
   const btn = document.createElement('button');
   btn.id = 'xf-flag-btn';
   btn.textContent = 'Flag';
@@ -107,18 +111,24 @@ async function initInvoicePage() {
   if (toolbar) {
     toolbar.prepend(btn);
   } else {
-    // Fallback: fixed position until SPA renders
     btn.classList.add('xf-fixed');
     document.body.appendChild(btn);
   }
+
+  window.scrollTo({ top: savedScroll, behavior: 'instant' });
 }
 
 // ─── Awaiting payment list page ───────────────────────────────────────────────
 
 let _listObserver = null;
+let _checkboxListener = null;
 
 function teardownListObserver() {
   if (_listObserver) { _listObserver.disconnect(); _listObserver = null; }
+  if (_checkboxListener) {
+    document.removeEventListener('change', _checkboxListener, { capture: true });
+    _checkboxListener = null;
+  }
 }
 
 function buildRemoveUI() {
@@ -293,9 +303,10 @@ async function initAwaitingPaymentPage() {
   _listObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['checked'] });
 
   // Checkbox clicks don't always fire attribute mutations — listen directly too
-  document.addEventListener('change', e => {
+  _checkboxListener = e => {
     if (e.target.type === 'checkbox') syncRemoveButton();
-  }, { capture: true });
+  };
+  document.addEventListener('change', _checkboxListener, { capture: true });
 }
 
 // ─── Router ───────────────────────────────────────────────────────────────────

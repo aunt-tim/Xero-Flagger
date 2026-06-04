@@ -3,11 +3,13 @@
   "name": "Xero Flagger",
   "version": "1.1.0",
   "description": "Flag payable invoices in Xero and bulk-remove them from the awaiting payment list.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "tabs"],
   "host_permissions": ["https://go.xero.com/*"],
   "action": {
-    "default_popup": "popup.html",
     "default_title": "Xero Flagger"
+  },
+  "background": {
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {
