@@ -69,6 +69,9 @@ async function initInvoicePage() {
       btn.className = '';
       btn.textContent = 'Flag for non-payment';
     } else {
+      // Update UI immediately before async work
+      btn.className = 'xf-flagged';
+      btn.textContent = 'Flagged for non-payment';
       // Legacy: <a href="/Contacts/View/UUID">Company Name<input ...></a>
       // SPA: [data-automationid="contact-name"]
       const contactLink = document.querySelector('a[href*="/Contacts/View/"]');
@@ -100,8 +103,6 @@ async function initInvoicePage() {
       const amount = amountEl ? amountEl.textContent.trim() : '';
 
       current[invoiceId] = { label, reference, amount, flaggedAt: Date.now(), url: location.href };
-      btn.className = 'xf-flagged';
-      btn.textContent = 'Flagged for non-payment';
     }
     await setFlagged(current);
   });
