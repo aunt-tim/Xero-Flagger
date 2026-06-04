@@ -1,0 +1,91 @@
+/* ── Flag button on invoice detail page ── */
+
+#xf-flag-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #e53935;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  margin-right: 8px;
+}
+
+#xf-flag-btn:hover {
+  background: #b71c1c;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+#xf-flag-btn:active {
+  transform: scale(0.96);
+}
+
+/* Flagged / active state — bright rainbow pulse */
+#xf-flag-btn.xf-flagged {
+  background: linear-gradient(135deg, #ff1744, #ff6d00, #ffd600, #00e676, #2979ff, #d500f9);
+  background-size: 300% 300%;
+  animation: xf-rainbow 1.8s ease infinite;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  box-shadow: 0 0 18px 4px rgba(255, 23, 68, 0.6);
+}
+
+@keyframes xf-rainbow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── Remove Flagged bar on awaiting-payment page ── */
+
+#xf-remove-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  background: #fff3e0;
+  border-left: 4px solid #ff6d00;
+  border-radius: 6px;
+  margin: 12px 0;
+}
+
+#xf-remove-btn {
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #ff6d00;
+  color: #fff;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+#xf-remove-btn:hover {
+  background: #e65100;
+}
+
+#xf-status {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+#xf-status.xf-success { color: #2e7d32; }
+#xf-status.xf-warn    { color: #f57f17; }
+#xf-status.xf-info    { color: #1565c0; }
+
+/* ── Highlight flagged rows in the bill list ── */
+
+.xf-row-flagged {
+  background: linear-gradient(90deg, #fff8e1, #fff3e0) !important;
+  outline: 2px solid #ff6d00;
+  outline-offset: -2px;
+}
