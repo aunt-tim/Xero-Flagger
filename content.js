@@ -141,7 +141,7 @@ async function handleRemoveFlagged(statusEl) {
     const row = rowMap.get(id);
     if (row) {
       const checkbox = row.querySelector('input[type="checkbox"]');
-      if (checkbox && !checkbox.checked) checkbox.click();
+      if (checkbox && checkbox.checked) checkbox.click();
       ticked++;
     } else {
       notFound++;
