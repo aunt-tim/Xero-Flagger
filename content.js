@@ -87,19 +87,25 @@ async function initInvoicePage() {
 
 // ─── Awaiting payment list page ───────────────────────────────────────────────
 
+let _listObserver = null;
+
+function teardownListObserver() {
+  if (_listObserver) { _listObserver.disconnect(); _listObserver = null; }
+}
+
 function buildRemoveUI() {
-  if (document.getElementById('xf-flag-btn-remove')) return;
+  // Remove any stale wrapper the SPA may have orphaned
+  const stale = document.getElementById('xf-remove-wrapper') || document.getElementById('xf-remove-bar');
+  if (stale) stale.remove();
 
   const btn = document.createElement('button');
   btn.id = 'xf-flag-btn-remove';
-  // Style to match Xero's XUI standard button
   btn.className = 'xui-button xui-button-standard xui-button-small';
   btn.textContent = 'Remove Flagged';
 
   const status = document.createElement('span');
   status.id = 'xf-status';
 
-  // Insert into the Make payment button group container
   const bulkActions = document.querySelector('.xui-u-flex.bulk-actions-spacing');
   if (bulkActions) {
     const wrapper = document.createElement('div');
@@ -108,7 +114,6 @@ function buildRemoveUI() {
     wrapper.appendChild(status);
     bulkActions.prepend(wrapper);
   } else {
-    // Fallback bar if the toolbar hasn't rendered yet
     const bar = document.createElement('div');
     bar.id = 'xf-remove-bar';
     bar.appendChild(btn);
@@ -190,19 +195,55 @@ async function highlightFlaggedRows(flagged) {
 }
 
 async function initAwaitingPaymentPage() {
-  await new Promise(r => setTimeout(r, 900));
-  buildRemoveUI();
-  const flagged = await getFlagged();
-  highlightFlaggedRows(flagged);
+  teardownListObserver();
+
+  // Poll for the toolbar up to 8 seconds, rebuilding the button each time
+  // Xero re-renders the toolbar on filter/sort changes so we watch for that too.
+  let attempts = 0;
+  const MAX = 40; // 40 × 200ms = 8s
+
+  const tryBuild = async () => {
+    buildRemoveUI();
+    const flagged = await getFlagged();
+    highlightFlaggedRows(flagged);
+  };
+
+  const poll = setInterval(async () => {
+    attempts++;
+    const toolbar = document.querySelector('.xui-u-flex.bulk-actions-spacing');
+    const alreadyInserted = document.getElementById('xf-flag-btn-remove');
+
+    if (toolbar && !alreadyInserted) {
+      await tryBuild();
+    } else if (!alreadyInserted && attempts >= MAX) {
+      // Toolbar never appeared — use fallback
+      clearInterval(poll);
+      await tryBuild();
+      return;
+    }
+
+    if (attempts >= MAX) clearInterval(poll);
+  }, 200);
+
+  // Also watch for Xero re-rendering the toolbar and evicting our button
+  _listObserver = new MutationObserver(async () => {
+    if (!document.getElementById('xf-flag-btn-remove') && isAwaitingPaymentPage()) {
+      await tryBuild();
+    }
+  });
+  _listObserver.observe(document.body, { childList: true, subtree: true });
 }
 
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 function init() {
   if (isInvoicePage()) {
+    teardownListObserver();
     initInvoicePage();
   } else if (isAwaitingPaymentPage()) {
     initAwaitingPaymentPage();
+  } else {
+    teardownListObserver();
   }
 }
 
