@@ -240,12 +240,13 @@ async function initAwaitingPaymentPage() {
   const poll = setInterval(async () => {
     attempts++;
     const toolbar = document.querySelector('.xui-u-flex.bulk-actions-spacing');
-    const alreadyInserted = document.getElementById('xf-flag-btn-remove');
+    const existing = document.getElementById('xf-flag-btn-remove');
 
-    if (toolbar && !alreadyInserted) {
+    // Rebuild if: button missing, OR button is in fallback bar but toolbar now exists
+    const inFallback = existing && !!document.getElementById('xf-remove-bar');
+    if (!existing || (toolbar && inFallback)) {
       await tryBuild();
-    } else if (!alreadyInserted && attempts >= MAX) {
-      // Toolbar never appeared — use fallback
+    } else if (!existing && attempts >= MAX) {
       clearInterval(poll);
       await tryBuild();
       return;
@@ -254,10 +255,13 @@ async function initAwaitingPaymentPage() {
     if (attempts >= MAX) clearInterval(poll);
   }, 200);
 
-  // Watch for toolbar eviction AND checkbox state changes
+  // Watch for toolbar eviction, toolbar appearance, and checkbox state changes
   _listObserver = new MutationObserver(async () => {
     if (!isAwaitingPaymentPage()) return;
-    if (!document.getElementById('xf-flag-btn-remove')) {
+    const toolbar = document.querySelector('.xui-u-flex.bulk-actions-spacing');
+    const existing = document.getElementById('xf-flag-btn-remove');
+    const inFallback = existing && !!document.getElementById('xf-remove-bar');
+    if (!existing || (toolbar && inFallback)) {
       await tryBuild();
     } else {
       syncRemoveButton();
