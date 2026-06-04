@@ -107,44 +107,46 @@ async function handleRemoveFlagged(statusEl) {
     return;
   }
 
-  // Collect invoice IDs currently visible in the list
-  const presentIds = getPresentInvoiceIds();
-
-  // Remove flagged invoices that are no longer in the list
-  let removed = 0;
-  let stillPresent = 0;
+  // Find rows for flagged invoices and tick their checkboxes
+  const rowMap = getRowsByInvoiceId();
+  let ticked = 0;
+  let notFound = 0;
 
   for (const id of flaggedIds) {
-    if (!presentIds.has(id)) {
-      delete flagged[id];
-      removed++;
+    const row = rowMap.get(id);
+    if (row) {
+      const checkbox = row.querySelector('input[type="checkbox"]');
+      if (checkbox && !checkbox.checked) {
+        // Trigger a real click so Xero's React/Angular handlers fire
+        checkbox.click();
+      }
+      ticked++;
     } else {
-      stillPresent++;
+      notFound++;
     }
   }
 
-  await setFlagged(flagged);
-
-  if (stillPresent === 0) {
-    statusEl.textContent = `✓ Done — ${removed} invoice${removed !== 1 ? 's' : ''} cleared.`;
-    statusEl.className = 'xf-success';
-  } else {
-    statusEl.textContent = `⚠ ${stillPresent} flagged invoice${stillPresent !== 1 ? 's are' : ' is'} still in the list. ${removed} cleared.`;
-    statusEl.className = 'xf-warn';
+  if (ticked === 0) {
+    statusEl.textContent = 'No flagged invoices found on this page.';
+    statusEl.className = 'xf-info';
+    return;
   }
 
-  // Re-highlight remaining flagged rows
-  highlightFlaggedRows(flagged);
+  statusEl.textContent = `✓ ${ticked} invoice${ticked !== 1 ? 's' : ''} selected.${notFound ? ` (${notFound} not on this page)` : ''}`;
+  statusEl.className = 'xf-success';
 }
 
-function getPresentInvoiceIds() {
-  const ids = new Set();
-  // Xero bill list rows contain an eye icon link or a row link with the invoice ID in the href
+// Returns a Map of invoiceId → table row element for every row currently in the list
+function getRowsByInvoiceId() {
+  const map = new Map();
   document.querySelectorAll('a[href*="InvoiceID="], a[href*="invoiceId="]').forEach(a => {
     const m = a.href.match(/[Ii]nvoice[Ii][Dd]=([a-f0-9-]+)/i);
-    if (m) ids.add(m[1].toLowerCase());
+    if (!m) return;
+    const id = m[1].toLowerCase();
+    const row = a.closest('tr, [role="row"], li');
+    if (row && !map.has(id)) map.set(id, row);
   });
-  return ids;
+  return map;
 }
 
 async function highlightFlaggedRows(flagged) {
